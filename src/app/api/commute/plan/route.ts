@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 const WEEK_MIN = 7 * 24 * 60;
 
 export async function GET(request: Request): Promise<Response> {
-  const limited = rateLimit(request);
+  const limited = rateLimit();
   if (limited) return limited;
   const url = new URL(request.url);
   const origin = parseOrigin(url);
@@ -17,7 +17,7 @@ export async function GET(request: Request): Promise<Response> {
   const arriveBy = parseInstant(url, "arriveBy", now, addMinutes(now, WEEK_MIN));
   if (arriveBy instanceof Response) return arriveBy;
 
-  const access = await resolveAccess(request);
+  const access = resolveAccess();
   if (!access.live) {
     return json({ source: "unavailable", reason: access.reason, generatedAt: now.toISOString() });
   }

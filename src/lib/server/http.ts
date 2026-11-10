@@ -1,12 +1,11 @@
-import { getIdentity } from "../../../cursor/identity";
 import { isInGreatBritain } from "../geo";
 import type { ApiError, LatLon, UnavailableReason } from "../traffic/types";
 
 export type Access = { live: true; key: string } | { live: false; reason: UnavailableReason };
 
 const RATE_WINDOW_MS = 60_000;
-const RATE_MAX_REQUESTS = 90;
-const RATE_MAX_CLIENTS = 5_000;
+/** Shared by every caller on this instance. A forecast spends one unit per slot. */
+const RATE_BUDGET = 36;
 
 const NO_STORE = { "cache-control": "private, no-store" };
 
@@ -18,15 +17,15 @@ export function apiError(status: number, error: string, message: string): Respon
   return json<ApiError>({ error, message }, status);
 }
 
-/**
- * Live traffic comes from a metered API paid for with the owner's key, so it
- * is only fetched for a viewer the Cursor apps gate has signed in.
- */
-export async function resolveAccess(request: Request): Promise<Access> {
-  const key = process.env.TOMTOM_API_KEY?.trim();
+/** Reads the server key at request time. A static `process.env.NAME` can be baked in at build. */
+function serverKey(): string {
+  return process.env["TOMTOM_API_KEY"]?.trim() ?? "";
+}
+
+/** Live traffic is public. The key stays on the server and is never sent to the browser. */
+export function resolveAccess(): Access {
+  const key = serverKey();
   if (!key) return { live: false, reason: "no_key" };
-  const identity = await getIdentity(request);
-  if (!identity.verified) return { live: false, reason: "signed_out" };
   return { live: true, key };
 }
 
@@ -55,32 +54,29 @@ export function parseInstant(url: URL, name: string, earliest: Date, latest: Dat
   return date;
 }
 
-const clients = new Map<string, { count: number; resetAt: number }>();
+const bucket = { used: 0, resetAt: 0 };
 
 /**
- * Per-instance request cap by client address, so one caller cannot run up the
- * traffic provider's bill or hammer the postcode service.
+ * Instance-wide cap on calls to paid and upstream services. It does not trust
+ * a client address header, so changing that header cannot reset the budget.
+ * `cost` is how many provider calls this request will make.
  */
-export function rateLimit(request: Request): Response | null {
-  const client = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+export function rateLimit(cost = 1): Response | null {
+  const spend = Math.max(1, Math.min(12, Math.floor(cost)));
   const now = Date.now();
-  const entry = clients.get(client);
-  if (!entry || entry.resetAt <= now) {
-    if (clients.size >= RATE_MAX_CLIENTS) {
-      for (const [key, value] of clients) {
-        if (value.resetAt <= now) clients.delete(key);
-      }
-      if (clients.size >= RATE_MAX_CLIENTS) clients.clear();
-    }
-    clients.set(client, { count: 1, resetAt: now + RATE_WINDOW_MS });
+  if (bucket.resetAt <= now) {
+    bucket.used = spend;
+    bucket.resetAt = now + RATE_WINDOW_MS;
     return null;
   }
-  entry.count += 1;
-  if (entry.count <= RATE_MAX_REQUESTS) return null;
-  return Response.json(
-    { error: "rate_limited", message: "Too many requests. Try again in a minute." } satisfies ApiError,
-    { status: 429, headers: { ...NO_STORE, "retry-after": String(Math.ceil((entry.resetAt - now) / 1000)) } },
-  );
+  if (bucket.used + spend > RATE_BUDGET) {
+    return Response.json(
+      { error: "rate_limited", message: "Too many requests. Try again in a minute." } satisfies ApiError,
+      { status: 429, headers: { ...NO_STORE, "retry-after": String(Math.ceil((bucket.resetAt - now) / 1000)) } },
+    );
+  }
+  bucket.used += spend;
+  return null;
 }
 
 export function upstreamFailure(scope: string, error: unknown): Response {

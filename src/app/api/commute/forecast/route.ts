@@ -8,8 +8,6 @@ export const dynamic = "force-dynamic";
 const WEEK_MIN = 7 * 24 * 60;
 
 export async function GET(request: Request): Promise<Response> {
-  const limited = rateLimit(request);
-  if (limited) return limited;
   const url = new URL(request.url);
   const origin = parseOrigin(url);
   if (origin instanceof Response) return origin;
@@ -22,8 +20,10 @@ export async function GET(request: Request): Promise<Response> {
   if (!Number.isInteger(count) || count < 1 || count > MAX_FORECAST_SLOTS) {
     return apiError(400, "bad_count", `count must be a whole number from 1 to ${MAX_FORECAST_SLOTS}.`);
   }
+  const limited = rateLimit(count);
+  if (limited) return limited;
 
-  const access = await resolveAccess(request);
+  const access = resolveAccess();
   if (!access.live) {
     return json({ source: "unavailable", reason: access.reason, generatedAt: now.toISOString() });
   }

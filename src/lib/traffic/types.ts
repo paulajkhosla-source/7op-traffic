@@ -10,7 +10,7 @@ export type SourceInfo = {
 };
 
 /** Why a live reading could not be made. The response then carries no drive time. */
-export type UnavailableReason = "no_key" | "signed_out";
+export type UnavailableReason = "no_key";
 
 export type UnavailableResponse = {
   source: "unavailable";

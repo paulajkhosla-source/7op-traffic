@@ -10,7 +10,7 @@ import { useOnline } from "@/lib/client/useOnline";
 import { usePolled, type Polled } from "@/lib/client/usePolled";
 import { activeCourt, forecastWindow } from "@/lib/planning";
 import { FORECAST_STEP_MIN } from "@/lib/traffic/constants";
-import type { ForecastResponse, NowResponse, PlanResponse, UnavailableReason, UnavailableResponse } from "@/lib/traffic/types";
+import type { ForecastResponse, NowResponse, PlanResponse, UnavailableResponse } from "@/lib/traffic/types";
 import { ForecastChart } from "./ForecastChart";
 import { Hero } from "./Hero";
 import { BallIcon, ChevronDownIcon, LocateIcon, PinIcon } from "./icons";
@@ -28,29 +28,25 @@ function liveOnly<T extends { source: "live" }>(polled: Polled<T | UnavailableRe
   return polled as Polled<T>;
 }
 
-function NeedsLiveKey({ reason }: { reason: UnavailableReason }) {
-  const signedOut = reason === "signed_out";
+function NeedsLiveKey() {
   return (
     <section className="card hero rise p-6" style={{ "--lv": "var(--color-ball)" } as CSSProperties}>
       <p className="eyebrow">Live traffic</p>
-      <h2 className="mt-3 text-[28px] font-semibold leading-[1.1] tracking-tight">
-        {signedOut ? "Sign in to see the roads" : "Waiting on a TomTom key"}
-      </h2>
+      <h2 className="mt-3 text-[28px] font-semibold leading-[1.1] tracking-tight">Waiting on a TomTom key</h2>
       <p className="mt-3 text-[15px] leading-relaxed text-muted">
-        {signedOut
-          ? "Drive times, delays and the best time to leave all come from TomTom’s live traffic. That service is metered, so it only runs for a signed-in viewer of this app."
-          : "Drive times, delays and the best time to leave all come from TomTom’s live traffic on the roads to the club. Nothing here is a guess. It starts once this app has a TomTom API key named TOMTOM_API_KEY. A free key from TomTom’s developer portal is enough, and Cursor asks for it with the app’s secrets. Don’t paste the key into the chat."}
+        Drive times, delays and the best time to leave all come from TomTom’s live traffic on the roads to the club.
+        Nothing here is a guess. It starts once this app has a TomTom API key named TOMTOM_API_KEY. A free key from
+        TomTom’s developer portal is enough, and Cursor asks for it with the app’s secrets. Don’t paste the key into
+        the chat.
       </p>
-      {!signedOut && (
-        <a
-          href="https://developer.tomtom.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-5 inline-flex rounded-full bg-ball px-5 py-2.5 text-sm font-semibold text-bg"
-        >
-          Get a free TomTom key
-        </a>
-      )}
+      <a
+        href="https://developer.tomtom.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-5 inline-flex rounded-full bg-ball px-5 py-2.5 text-sm font-semibold text-bg"
+      >
+        Get a free TomTom key
+      </a>
     </section>
   );
 }
@@ -169,7 +165,7 @@ function Dashboard({ origin, settings }: { origin: Origin; settings: Settings })
   };
 
   if (nowQ.data?.source === "unavailable") {
-    return <NeedsLiveKey reason={nowQ.data.reason} />;
+    return <NeedsLiveKey />;
   }
 
   const nowLive = liveOnly<NowResponse>(nowQ);

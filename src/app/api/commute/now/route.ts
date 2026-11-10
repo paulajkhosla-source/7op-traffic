@@ -4,11 +4,11 @@ import { trafficService } from "@/lib/traffic/service";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request): Promise<Response> {
-  const limited = rateLimit(request);
+  const limited = rateLimit();
   if (limited) return limited;
   const origin = parseOrigin(new URL(request.url));
   if (origin instanceof Response) return origin;
-  const access = await resolveAccess(request);
+  const access = resolveAccess();
   if (!access.live) {
     return json({ source: "unavailable", reason: access.reason, generatedAt: new Date().toISOString() });
   }

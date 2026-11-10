@@ -6,9 +6,9 @@ It installs as a PWA: add it to your home screen and it opens full screen, inclu
 
 ## Traffic data
 
-Live traffic comes from the [TomTom Routing API](https://developer.tomtom.com/routing-api/documentation/tomtom-maps/v1/calculate-route). The app reads the key from `TOMTOM_API_KEY` on the server and never sends it to the browser. Live results are served only to a signed-in viewer of the published app.
+Live traffic comes from the [TomTom Routing API](https://developer.tomtom.com/routing-api/documentation/tomtom-maps/v1/calculate-route). The app reads the key from `TOMTOM_API_KEY` on the server and never sends it to the browser. Anyone who can open the app gets the same live drive times.
 
-The app does not invent a drive time. With no key, or when the viewer is signed out, it says live traffic is unavailable. If TomTom fails to answer, the last live reading stays on screen and the app retries; it never substitutes a guessed ETA.
+The app does not invent a drive time. With no key, it says live traffic is unavailable. If TomTom fails to answer, the last live reading stays on screen and the app retries; it never substitutes a guessed ETA.
 
 Later departures use TomTom's `departAt` so the forecast is that provider's historic traffic profile for the slot, not a homemade curve. A booked court uses `arriveAt` to work out when to leave.
 

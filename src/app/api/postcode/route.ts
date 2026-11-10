@@ -18,7 +18,7 @@ type PostcodesIoBody = {
 };
 
 export async function GET(request: Request): Promise<Response> {
-  const limited = rateLimit(request);
+  const limited = rateLimit();
   if (limited) return limited;
 
   const compact = (new URL(request.url).searchParams.get("q") ?? "").replace(/\s+/g, "").toUpperCase();
